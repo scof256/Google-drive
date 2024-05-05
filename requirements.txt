@@ -16,7 +16,6 @@ langchain-contrib
 langchain-core
 langchain-groq
 langchain-openai
-langchain-pinecone
 langchain-text-splitters
 langchain-together
 langchainhub
