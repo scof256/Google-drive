@@ -1,0 +1,304 @@
+{% extends 'googledriveapp/base.html' %}
+{% load static %}
+{% block body %}
+
+<div class="container my-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 title-text">Folder: {{ folder.foldername }}</h4>
+    <div class="d-flex">
+      <a href="{% url 'index' %}" class="btn btn-outline-primary btn-sm me-2">
+        <i class="fas fa-home fa-lg me-2"></i>Home
+      </a>
+      <a href="{% url 'all_files' %}" class="btn btn-outline-primary btn-sm me-2">
+        <i class="fas fa-file-alt fa-lg me-2"></i>All Files
+      </a>
+      <a href="{% url 'chatbot2' %}" class="btn btn-outline-primary btn-sm me-2">
+        <i class="fas fa-comment-dots fa-lg me-2"></i>Chat
+      </a>
+      <a href="{% url 'research' %}" class="btn btn-outline-primary btn-sm me-2">
+        <i class="fas fa-search fa-lg me-2"></i>Research
+      </a>
+      <button type="button" class="btn btn-outline-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addFileModal">
+        <i class="fas fa-plus me-2"></i>Add File
+      </button>
+      <button type="button" class="btn btn-outline-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addSubfolderModal">
+        <i class="fas fa-folder-plus me-2"></i>Add Subfolder
+      </button>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-12">
+      <!-- Subfolders Section -->
+      {% if folder.subfolders.exists %}
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-secondary text-white">
+            <h5 class="card-title mb-0">Subfolders</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              {% for subfolder in folder.subfolders.all %}
+                <div class="col-md-4">
+                  <div class="card mb-4" style="background-color: rgba(173, 216, 230, 0.3); transition: transform 0.3s;">
+                    <div class="card-body">
+                      <h5 class="card-title">{{ subfolder.foldername }}</h5>
+                      <p class="card-text">{{ subfolder.folderdesc }}</p>
+                      <a href="{% url 'folder' subfolder.id %}" class="btn btn-primary">Open Folder</a>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+      
+      <!-- Files Section -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="card-title mb-0">Files</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover table-striped table-sm">
+              <thead class="thead-dark">
+                <tr>
+                  <th>File Name</th>
+                  <th>Year</th>
+                  <th>Course</th>
+                  <th>Course Unit</th>
+                  <th>Description</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for file in files %}
+                <tr>
+                  <td><strong class="small">{{ file.filetitle }}</strong></td>
+                  <td class="small">{{ file.year }}</td>
+                  <td class="small">{{ file.course }}</td>
+                  <td class="small">{{ file.course_unit }}</td>
+                  <td class="small">{{ file.description|truncatechars:50 }}</td>
+                  <td>
+                    <a href="{% url 'chat_with_document' file.id %}" class="btn btn-primary btn-sm">Chat</a>
+                    <a href="{% url 'summarize_next_page' file.id %}" class="btn btn-secondary btn-sm summarize-btn" data-file-id="{{ file.id }}">Summarize</a>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center small">No files found.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Bookmarked Files Section -->
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="card-title mb-0">Bookmarked Files</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover table-striped table-sm">
+              <thead class="thead-dark">
+                <tr>
+                  <th>File Name</th>
+                  <th>Year</th>
+                  <th>Course</th>
+                  <th>Course Unit</th>
+                  <th>Description</th>
+                  <th>Uploaded By</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for bookmark in folder.bookmarks.all %}
+                <tr>
+                  <td><strong class="small">{{ bookmark.file.filetitle }}</strong></td>
+                  <td class="small">{{ bookmark.file.year }}</td>
+                  <td class="small">{{ bookmark.file.course }}</td>
+                  <td class="small">{{ bookmark.file.course_unit }}</td>
+                  <td class="small">{{ bookmark.file.description|truncatechars:50 }}</td>
+                  <td class="small">{{ bookmark.file.folder.folderuser.username }}</td>
+                  <td>
+                    <a href="{% url 'chat_with_document' bookmark.file.id %}" class="btn btn-primary btn-sm">Chat</a>
+                    <a href="{% url 'summarize_next_page' bookmark.file.id %}" class="btn btn-secondary btn-sm summarize-btn" data-file-id="{{ bookmark.file.id }}">Summarize</a>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center small">No bookmarked files found.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add File Modal -->
+<div class="modal fade" id="addFileModal" tabindex="-1" aria-labelledby="addFileModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="addFileModalLabel">
+          <i class="fas fa-plus mr-2"></i>Add File
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="post" enctype="multipart/form-data" id="file-form">
+          {% csrf_token %}
+          <div class="form-group">
+            <label for="filetitle" class="form-label">File Title</label>
+            <input type="text" class="form-control" id="filetitle" name="filetitle" required>
+          </div>
+          <div class="form-group">
+            <label for="file" class="form-label">File</label>
+            <input type="file" class="form-control" id="file" name="file" required>
+          </div>
+          <div class="form-group">
+            <label for="year" class="form-label">Year</label>
+            <select class="form-select" id="year" name="year" required>
+              <option value="">Select option</option>
+              <option value="Year 1">Year 1</option>
+              <option value="Year 2">Year 2</option>
+              <option value="Year 3">Year 3</option>
+              <option value="Year 4">Year 4</option>
+              <option value="Year 5">Year 5</option>
+              <option value="Year 6">Year 6</option>
+              <option value="General (N/A)">General (N/A)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="course" class="form-label">Course</label>
+            <input type="text" class="form-control" id="course" name="course" required>
+          </div>
+          <div class="form-group">
+            <label for="course_unit" class="form-label">Course Unit</label>
+            <input type="text" class="form-control" id="course_unit" name="course_unit" required>
+          </div>
+          <div class="form-group">
+            <label for="description" class="form-label">Description</label>
+            <textarea class="form-control" id="description" name="description"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary shadow-sm">
+            <i class="fas fa-plus mr-1"></i>Add File
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Subfolder Modal -->
+<div class="modal fade" id="addSubfolderModal" tabindex="-1" aria-labelledby="addSubfolderModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-secondary text-white">
+        <h5 class="modal-title" id="addSubfolderModalLabel">
+          <i class="fas fa-folder-plus mr-2"></i>Add Subfolder
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="post" action="{% url 'addfolder' %}">
+          {% csrf_token %}
+          <input type="hidden" name="parent_folder" value="{{ folder.id }}">
+          <div class="form-group">
+            <label for="foldername" class="form-label">Folder Name</label>
+            <input type="text" class="form-control" id="foldername" name="foldername" required>
+          </div>
+          <div class="form-group">
+            <label for="desc" class="form-label">Description</label>
+            <textarea class="form-control" id="desc" name="desc" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-secondary shadow-sm">
+            <i class="fas fa-plus mr-1"></i>Add Subfolder
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Modal -->
+<div class="modal fade" id="summaryModal" tabindex="-1" aria-labelledby="summaryModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-secondary text-white">
+        <h5 class="modal-title" id="summaryModalLabel">
+          <i class="fas fa-file-alt mr-2"></i>Summary
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Summary content will be loaded here via AJAX -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock body %}
+
+{% block extra_css %}
+<style>
+  .title-text {
+    font-size: 2.5rem;
+    color: rgba(0, 0, 0, 0.7);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+  }
+</style>
+{% endblock extra_css %}
+
+{% block extra_js %}
+<script src="{% static 'js/jquery.min.js' %}"></script>
+<script src="(link unavailable)"></script>
+<script>
+  $(document).ready(function() {
+    // ... existing document ready code ...
+
+    // Handle the summarization button click
+    $('.summarize-btn').on('click', function(e) {
+      e.preventDefault();
+      var fileId = $(this).data('file-id');
+      $.ajax({
+        type: 'POST',
+        url: $(this).attr('href'),
+        data: {
+          'csrfmiddlewaretoken': '{{ csrf_token }}',
+          'page_number': '1' // You might want to dynamically set this based on user input or other logic
+        },
+        success: function(data) {
+          // Handle success, e.g., display the summary in a modal
+          console.log(data);
+          // Example: Open a modal with the summary
+          $('#summaryModal .modal-body').html(data.summary);
+          $('#summaryModal').modal('show');
+        },
+        error: function(xhr, status, error) {
+          // Handle error
+          alert('An error occurred: ' + error);
+        }
+      });
+    });
+    
+    // Add hover effect to subfolders
+    $('.card.mb-4').hover(
+      function() {
+        $(this).css('transform', 'translateY(-5px)');
+      },
+      function() {
+        $(this).css('transform', '');
+      }
+    );
+  });
+</script>
+{% endblock extra_js %}

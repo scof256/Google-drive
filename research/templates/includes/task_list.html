@@ -1,0 +1,12 @@
+{% for task in task_list %}
+    <div class="task mb-4">
+        <h4 class="font-bold">Task {{ task.id }}: {{ task.task }}</h4>
+        <p class="text-sm text-gray-600">Tool: {{ task.tool }}</p>
+        <p class="text-sm text-gray-600">Status: {{ task.status }}</p>
+        {% if task.output %}
+            <div class="output mt-2 p-2 bg-gray-100 rounded">
+                <p>{{ task.output }}</p>
+            </div>
+        {% endif %}
+    </div>
+{% endfor %}

@@ -1,0 +1,105 @@
+{% extends 'googledriveapp/base.html' %}
+{% load static %}
+{% block body %}
+
+<div class="container my-5">
+    <h1 class="mb-4">All Files</h1>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title">Files</h5>
+                        <div>
+                            <a href="{% url 'index' %}" class="btn btn-outline-primary btn-sm me-2">
+                                <i class="fas fa-home"></i> Home
+                            </a>
+                            <a href="{% url 'chatbot2' %}" class="btn btn-outline-primary btn-sm me-2">
+                                <i class="fas fa-comment-dots"></i> Chat
+                            </a>
+                            <a href="{% url 'research' %}" class="btn btn-outline-primary btn-sm me-2">
+                                <i class="fas fa-search"></i> Research
+                            </a>
+                        </div>
+                    </div>
+                    <ul class="list-group">
+                        {% for file in all_files %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center" data-file-id="{{ file.id }}">
+                            <div>
+                                <span style="font-size: 1rem; color: blue;"><strong>{{ file.filetitle }}</strong></span><br>
+                                <span style="font-size: 0.8rem;">
+                                    Year: {{ file.year }} | Course: {{ file.course }} | Course Unit: {{ file.course_unit }} | Description: {{ file.description|truncatechars:50 }}
+                                </span>
+                                <br>
+                                <span style="font-size: 0.7rem; color: gray;">Uploaded by: {{ file.folder.folderuser.username }}</span>
+                            </div>
+                            <div>
+                                <a href="{% url 'view_pdf' file.id %}" class="btn btn-primary btn-sm">View PDF</a>
+                                <button class="like-btn btn btn-sm {% if request.user in file.likes.all %}text-danger{% else %}text-muted{% endif %}">
+                                    <i class="fas fa-heart{% if not request.user in file.likes.all %}-empty{% endif %} fa-lg"></i>
+                                </button>
+                                <span class="likes-count">{{ file.likes.count }}</span>
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="far fa-bookmark"></i> Bookmark
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        {% for folder in user_folders %}
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'bookmark_file' file.id folder.id %}">
+                                                {{ folder.foldername }}
+                                            </a>
+                                        </li>
+                                        {% empty %}
+                                        <li><span class="dropdown-item">No folders available</span></li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                <a href="{% url 'summarize_the_document' file.id %}" class="btn btn-primary btn-sm">Summarize</a>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">No files found.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            $('.like-btn').click(function() {
+                var fileId = $(this).closest('li').data('file-id');
+                var $this = $(this);
+                $.ajax({
+                    url: "{% url 'like_file' 0 %}".replace('0', fileId),
+                    type: 'GET',
+                    success: function(data) {
+                        if (data.liked) {
+                            $this.removeClass('text-muted').addClass('text-danger');
+                            $this.find('i').removeClass('fa-heart-empty').addClass('fa-heart');
+                        } else {
+                            $this.removeClass('text-danger').addClass('text-muted');
+                            $this.find('i').removeClass('fa-heart').addClass('fa-heart-empty');
+                        }
+                        $this.closest('li').find('.likes-count').text(data.likes_count);
+                    },
+                    error: function() {
+                        alert('An error occurred while processing your request.');
+                    }
+                });
+            });
+        });
+    </script>
+
+{% endblock body %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/fontawesome.min.css' %}">
+{% endblock extra_css %}
+
+{% block extra_js %}
+<script src="{% static 'js/jquery.min.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock extra_js %}

@@ -1,0 +1,74 @@
+{% extends 'googledriveapp/base.html' %}
+{% load static %}
+{% block body %}
+
+<div class="container my-5">
+    <h1 class="mb-4">All Files</h1>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Files</h5>
+                    <ul class="list-group">
+                        {% for file in all_files %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center" data-file-id="{{ file.id }}">
+                            <div>
+                                <span style="font-size: 1rem; color: blue;"><strong>{{ file.filetitle }}</strong></span><br>
+                                <span style="font-size: 0.8rem;">
+                                    Year: {{ file.year }} | Course: {{ file.course }} | Course Unit: {{ file.course_unit }} | Description: {{ file.description|truncatechars:50 }}
+                                </span>
+                                <br>
+                                <span style="font-size: 0.7rem; color: gray;">Uploaded by: {{ file.folder.folderuser.username }}</span>
+                            </div>
+                            <div>
+                                <a href="{% url 'view_pdf' file.id %}" class="btn btn-primary btn-sm">View PDF</a>
+                                <button class="like-btn btn btn-sm {% if request.user in file.likes.all %}btn-danger{% else %}btn-outline-danger{% endif %}" data-file-id="{{ file.id }}">
+                                    <i class="fas fa-heart"></i>
+                                    <span class="likes-count">{{ file.likes.count }}</span>
+                                </button>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">No files found.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock body %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/fontawesome.min.css' %}">
+{% endblock extra_css %}
+
+{% block extra_js %}
+<script src="{% static 'js/jquery.min.js' %}"></script>
+<script>
+$(document).ready(function() {
+    $('.like-btn').click(function() {
+        var fileId = $(this).data('file-id');
+        var $this = $(this);
+        $.ajax({
+            url: "{% url 'like_file' 0 %}".replace('0', fileId),
+            type: 'POST',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}',
+            },
+            success: function(data) {
+                if (data.liked) {
+                    $this.removeClass('btn-outline-danger').addClass('btn-danger');
+                } else {
+                    $this.removeClass('btn-danger').addClass('btn-outline-danger');
+                }
+                $this.closest('li').find('.likes-count').text(data.likes_count);
+            },
+            error: function() {
+                alert('An error occurred while processing your request.');
+            }
+        });
+    });
+});
+</script>
+{% endblock extra_js %}

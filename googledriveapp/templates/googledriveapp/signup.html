@@ -1,0 +1,94 @@
+{% extends 'googledriveapp/base.html' %} {% block body %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h3 class="card-title text-center mb-4" style="text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); color: rgba(0, 0, 0, 0.8);">
+            <i class="fas fa-user-plus mr-2"></i>Sign Up
+          </h3>
+          {% for message in messages %}
+          <div class="alert alert-danger" role="alert" style="text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); color: rgba(0, 0, 0, 0.8);">{{message}}</div>
+          {% endfor %}
+          <form action="{% url 'signup' %}" method="POST">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="exampleInputEmail1" class="form-label" style="text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); color: rgba(0, 0, 0, 0.8);"
+                ><i class="fas fa-user mr-1"></i>Username</label
+              >
+              <input
+                type="text"
+                class="form-control shadow-sm"
+                id="exampleInputEmail1"
+                aria-describedby="emailHelp"
+                name="username"
+              />
+            </div>
+            <div class="mb-3">
+              <label for="exampleInputEmail1" class="form-label" style="text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); color: rgba(0, 0, 0, 0.8);"
+                ><i class="fas fa-envelope mr-1"></i>Email</label
+              >
+              <input
+                type="email"
+                class="form-control shadow-sm"
+                id="exampleInputEmail1"
+                aria-describedby="emailHelp"
+                name="email"
+              />
+            </div>
+            <div class="mb-3">
+              <label for="exampleInputEmail1" class="form-label" style="text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); color: rgba(0, 0, 0, 0.8);"
+                ><i class="fas fa-user mr-1"></i>First Name</label
+              >
+              <input
+                type="text"
+                class="form-control shadow-sm"
+                id="exampleInputEmail1"
+                aria-describedby="emailHelp"
+                name="fname"
+              />
+            </div>
+            <div class="mb-3">
+              <label for="exampleInputEmail1" class="form-label" style="text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); color: rgba(0, 0, 0, 0.8);"
+                ><i class="fas fa-user mr-1"></i>Last Name</label
+              >
+              <input
+                type="text"
+                class="form-control shadow-sm"
+                id="exampleInputEmail1"
+                aria-describedby="emailHelp"
+                name="lname"
+              />
+            </div>
+            <div class="mb-3">
+              <label for="exampleInputPassword1" class="form-label" style="text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); color: rgba(0, 0, 0, 0.8);"
+                ><i class="fas fa-lock mr-1"></i>Password</label
+              >
+              <input
+                type="password"
+                class="form-control shadow-sm"
+                id="exampleInputPassword1"
+                name="password"
+              />
+            </div>
+            <div class="mb-3">
+              <label for="exampleInputPassword1" class="form-label" style="text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); color: rgba(0, 0, 0, 0.8);"
+                ><i class="fas fa-lock mr-1"></i>Confirm Password</label
+              >
+              <input
+                type="password"
+                class="form-control shadow-sm"
+                id="exampleInputPassword1"
+                name="cpassword"
+              />
+            </div>
+            <button type="submit" class="btn btn-primary shadow-sm">
+              <i class="fas fa-user-plus mr-1"></i>Sign Up
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock body %}

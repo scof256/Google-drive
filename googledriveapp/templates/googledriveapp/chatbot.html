@@ -1,0 +1,370 @@
+{% extends 'googledriveapp/base.html' %}
+
+{% block body %}
+<style>
+  .chatbot-container {
+    background-color: #f8f9fa;
+    padding: 5px;
+    border-radius: 10px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    margin-top: 100px;
+    margin: 0 auto;
+    max-width: 800px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .chatbot-header {
+    margin-bottom: 20px;
+  }
+  
+  .chatbot-header h4 {
+    font-weight: bold;
+  }
+  
+  .chatbot-messages {
+    flex-grow: 1;
+    padding: 20px;
+    margin-bottom: 100px; /* Increased margin to accommodate the expanded input */
+    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .user-message {
+    background-color: #007bff;
+    color: #fff;
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .bot-message {
+    background-color: #fff;
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    position: relative;
+    padding-bottom: 30px;
+  }
+  
+  .bot-message-content {
+    margin-bottom: 20px;
+  }
+  
+  .chatbot-input {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-top: 1px solid #e0e0e0;
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .chatbot-input textarea {
+    flex-grow: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    resize: none;
+    overflow: hidden;
+    min-height: 60px;
+    max-height: 200px;
+    overflow-y: auto;
+    height: auto;
+  }
+  
+  .chatbot-input textarea:focus {
+    outline: none;
+  }
+  
+  .chatbot-input button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-left: 10px;
+  }
+  
+  .chatbot-input button:hover {
+    background-color: #0056b3;
+  }
+  
+  .loading-spinner {
+    display: none;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    margin-left: 10px;
+  }
+  
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .button-container {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    right: 5px;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .copy-button,
+  .clear-button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .copy-button:hover,
+  .clear-button:hover {
+    background-color: #0056b3;
+  }
+  
+  .header-buttons {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  
+  .header-buttons a {
+    margin-left: 10px;
+  }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+<script>
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  const csrftoken = getCookie('csrftoken');
+  
+  function sendQuestion() {
+    const question = document.getElementById("question").value;
+    if (question.trim() !== "") {
+      // Show the loading spinner
+      document.querySelector(".loading-spinner").style.display = "inline-block";
+      document.querySelector(".button-text").style.display = "none";
+  
+      // Add user question to the chat interface
+      const chatbotMessages = document.querySelector(".chatbot-messages");
+      const userMessage = document.createElement("div");
+      userMessage.classList.add("user-message");
+      userMessage.textContent = question;
+      chatbotMessages.appendChild(userMessage);
+  
+      // Scroll the entire page down
+      window.scrollTo(0, document.body.scrollHeight);
+  
+      // Create a container element for the response
+      const responseContainer = document.createElement("div");
+      responseContainer.classList.add("bot-message");
+      const responseContent = document.createElement("div");
+      responseContent.classList.add("bot-message-content");
+      responseContainer.appendChild(responseContent);
+      chatbotMessages.appendChild(responseContainer);
+  
+      // Send the question to the server
+      fetch("/chatbot/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrftoken,
+        },
+        body: JSON.stringify({ question: question }),
+      })
+        .then(async (response) => {
+          if (response.ok) {
+            const reader = response.body.getReader();
+            let output = "";
+  
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) {
+                break;
+              }
+              output += new TextDecoder().decode(value);
+              responseContent.innerHTML = marked.parse(output);
+              window.scrollTo(0, document.body.scrollHeight);
+            }
+  
+            // Hide the loading spinner
+            document.querySelector(".loading-spinner").style.display = "none";
+            document.querySelector(".button-text").style.display = "inline";
+  
+            const buttonContainer = document.createElement("div");
+            buttonContainer.classList.add("button-container");
+  
+            const clearButton = document.createElement("button");
+            clearButton.classList.add("clear-button");
+            clearButton.textContent = "Clear";
+            clearButton.addEventListener("click", function () {
+              clearChatHistory();
+            });
+            buttonContainer.appendChild(clearButton);
+  
+            const copyButton = document.createElement("button");
+            copyButton.classList.add("copy-button");
+            copyButton.textContent = "Copy";
+            copyButton.addEventListener("click", function () {
+              copyText(responseContent);
+            });
+            buttonContainer.appendChild(copyButton);
+  
+            responseContainer.appendChild(buttonContainer);
+  
+            updateClearHistoryButton();
+          } else {
+            console.error("Error:", response.statusText);
+            // Hide the loading spinner
+            document.querySelector(".loading-spinner").style.display = "none";
+            document.querySelector(".button-text").style.display = "inline";
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          // Hide the loading spinner
+          document.querySelector(".loading-spinner").style.display = "none";
+          document.querySelector(".button-text").style.display = "inline";
+        });
+  
+      // Clear the input field
+      document.getElementById("question").value = "";
+    }
+  }
+  
+  function copyText(element) {
+    const messageContent = element.textContent.trim();
+    navigator.clipboard.writeText(messageContent);
+  }
+  
+  function clearChatHistory() {
+    const chatbotMessages = document.querySelector(".chatbot-messages");
+    chatbotMessages.innerHTML = "";
+    updateClearHistoryButton();
+  
+    // Clear the user's input
+    document.getElementById("question").value = "";
+  
+    // Make an AJAX request to the server to delete the conversation history session variable
+    fetch('/clear_conversation_history/', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrftoken,
+      },
+    });
+  }
+  
+  // Clear the conversation history when the page loads
+  window.addEventListener('load', clearChatHistory);
+  
+  // Update this function
+  function updateClearHistoryButton() {
+    const chatbotMessages = document.querySelector(".chatbot-messages");
+    const clearHistoryButton = document.querySelector(".clear-history-button");
+    if (clearHistoryButton) { // Check if the button exists
+      if (chatbotMessages.childElementCount > 0) {
+        clearHistoryButton.style.display = "block";
+      } else {
+        clearHistoryButton.style.display = "none";
+      }
+    }
+  }
+  
+  // Move the event listener code inside a function
+  function initializeClearHistoryButton() {
+    const clearHistoryButton = document.querySelector(".clear-history-button");
+    if (clearHistoryButton) { // Check if the button exists
+      clearHistoryButton.addEventListener("click", clearChatHistory);
+    }
+  }
+  
+  // Call the functions after the DOM is loaded
+  document.addEventListener("DOMContentLoaded", function() {
+    updateClearHistoryButton();
+    initializeClearHistoryButton();
+  });
+  
+  function autoResizeTextarea() {
+    const textarea = document.getElementById("question");
+    const chatbotMessages = document.querySelector(".chatbot-messages");
+  
+    textarea.style.height = "auto";
+    textarea.style.height = Math.min(textarea.scrollHeight, 200) + "px";
+  
+    chatbotMessages.style.marginBottom = textarea.offsetHeight + 20 + "px";
+  }
+  
+  document.getElementById("question").addEventListener("input", autoResizeTextarea);
+</script>
+
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-12">
+      <div class="header-buttons">
+        <a href="{% url 'index' %}" class="btn btn-outline-primary">
+          <i class="fas fa-home"></i> Home
+        </a>
+        <a href="{% url 'all_files' %}" class="btn btn-outline-primary">
+          <i class="fas fa-file-alt"></i> All Files
+        </a>
+        <a href="{% url 'research' %}" class="btn btn-outline-primary">
+          <i class="fas fa-search"></i> Research
+        </a>
+      </div>
+      <div class="chatbot-container">
+        <div class="chatbot-header">
+          <h4>Assistant Ai Lecturer</h4>
+          <h6>How can I help you, dear?</h6>
+        </div>
+        <div class="chatbot-messages"></div>
+      </div>
+    </div>
+  </div>
+  <div class="chatbot-input">
+    <textarea id="question" name="question" placeholder="Ask Ai Lecturer, Type your question..." class="form-control shadow-sm" rows="3"></textarea>
+    <button onclick="sendQuestion()" class="btn btn-primary shadow-sm">
+      <span class="button-text">Send</span>
+      <span class="loading-spinner"></span>
+    </button>
+  </div>
+</div>
+{% endblock body %}

@@ -1,0 +1,1049 @@
+{% extends 'googledriveapp/base.html' %}
+{% block body %}
+{% load static %}
+
+<style>
+    #pdfContainer {
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+    #pdfCanvasContainer {
+        width: 100%;
+    }
+    .pdf-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 10px;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    }
+    .pdf-toolbar button {
+        margin: 0 5px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+    }
+    .pdf-toolbar button:hover {
+        background-color: #0056b3;
+    }
+    .page-info {
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+    .zoom-label {
+        margin-right: 5px;
+        font-weight: bold;
+    }
+    .chatbot-container {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        height: 100%;
+        overflow-y: auto;
+        position: relative;
+    }
+    .chatbot-header {
+        margin-bottom: 20px;
+    }
+    .chatbot-header h4 {
+        font-weight: bold;
+    }
+    .chatbot-messages {
+        margin-bottom: 20px;
+    }
+    .user-message {
+        background-color: #007bff;
+        color: #fff;
+        padding: 10px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+    }
+    .bot-message {
+        background-color: #fff;
+        padding: 10px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+    }
+    .message-text {
+        margin-bottom: 5px;
+    }
+    .message-source {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    .message-source a {
+        color: #007bff;
+        text-decoration: none;
+    }
+    .message-source a:hover {
+        text-decoration: underline;
+    }
+    .chatbot-input {
+        display: flex;
+    }
+    .chatbot-input input {
+        flex-grow: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 5px 0 0 5px;
+    }
+    .chatbot-input button {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 0 5px 5px 0;
+        cursor: pointer;
+    }
+    .copy-button {
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        margin-left: 10px;
+    }
+    .loading-spinner {
+        display: none;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #3498db;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        margin-left: 10px;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .loading-spinner {
+        display: none;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #007bff;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        margin-left: 10px;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .clear-history-button {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+    .pdf-toolbar button {
+        margin: 0 5px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+    }
+    .pdf-toolbar button:hover {
+        background-color: #0056b3;
+    }
+    .pdf-toolbar button:active {
+        background-color: #004085;
+    }
+    .copy-button {
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        margin-left: 10px;
+    }
+    .copy-button:hover {
+        background-color: #0056b3;
+    }
+    .copy-button:active {
+        background-color: #004085;
+    }
+    .pdf-toolbar button {
+        margin: 0 5px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+    }
+    .pdf-toolbar button:hover {
+        background-color: #0056b3;
+    }
+    .pdf-toolbar button:active {
+        background-color: #004085;
+    }
+    .copy-button {
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        margin-left: 10px;
+        transition: background-color 0.3s ease;
+    }
+    .copy-button:hover {
+        background-color: #0056b3;
+    }
+    .copy-button:active {
+        background-color: #004085;
+    }
+    .chatbot-input button {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 0 5px 5px 0;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    .chatbot-input button:hover {
+        background-color: #0056b3;
+    }
+    .chatbot-input button:active {
+        background-color: #004085;
+    }
+    .clear-history-button {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    .clear-history-button:hover {
+        background-color: #0056b3;
+    }
+    .clear-history-button:active {
+        background-color: #004085;
+    }
+</style>
+
+<script>
+    function sendQuestion() {
+        const question = document.getElementById('question').value;
+        if (question.trim() !== '') {
+            // Show the loading spinner
+            document.querySelector('.loading-spinner').style.display = 'inline-block';
+
+            // Add user question to the chat interface
+            const chatbotMessages = document.querySelector('.chatbot-messages');
+            const userMessage = document.createElement('div');
+            userMessage.classList.add('user-message');
+            const messageText = document.createElement('div');
+            messageText.classList.add('message-text');
+            messageText.textContent = question;
+            userMessage.appendChild(messageText);
+            chatbotMessages.appendChild(userMessage);
+    
+            // Create form data object
+            const formData = new FormData();
+            formData.append('question', question);
+    
+            // Send question to the server and receive response
+            fetch(`/chat_with_document/{{ file_obj.id }}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide the loading spinner
+                document.querySelector('.loading-spinner').style.display = 'none';
+
+                // Add bot response to the chat interface
+                const botMessage = document.createElement('div');
+                botMessage.classList.add('bot-message');
+                const messageText = document.createElement('div');
+                messageText.classList.add('message-text');
+                messageText.textContent = data.answer;
+                botMessage.appendChild(messageText);
+    
+                if (data.page_numbers.length > 0) {
+                    const messageSource = document.createElement('div');
+                    messageSource.classList.add('message-source');
+                    messageSource.innerHTML = 'Source: ' + data.page_numbers.map(page => `<a href="#" onclick="jumpToPage(${page + 1})">Page ${page + 1}</a>`).join(', ');
+                    botMessage.appendChild(messageSource);
+                }
+    
+                chatbotMessages.appendChild(botMessage);
+                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                updateClearHistoryButton();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Hide the loading spinner
+                document.querySelector('.loading-spinner').style.display = 'none';
+            });
+    
+            // Clear the input field
+            document.getElementById('question').value = '';
+        }
+    }
+
+    function copyText(element) {
+        const text = element.textContent;
+        navigator.clipboard.writeText(text);
+    }
+
+    function clearChatHistory() {
+        const chatbotMessages = document.querySelector('.chatbot-messages');
+        chatbotMessages.innerHTML = '';
+        updateClearHistoryButton();
+    }
+
+    function updateClearHistoryButton() {
+        const chatbotMessages = document.querySelector('.chatbot-messages');
+        const clearHistoryButton = document.querySelector('.clear-history-button');
+        if (chatbotMessages.childElementCount > 0) {
+            clearHistoryButton.style.display = 'block';
+        } else {
+            clearHistoryButton.style.display = 'none';
+        }
+    }
+</script>
+
+<script>
+    function sendQuestion() {
+        const question = document.getElementById('question').value;
+        if (question.trim() !== '') {
+            // Show the loading spinner
+            document.querySelector('.loading-spinner').style.display = 'inline-block';
+
+            // Add user question to the chat interface
+            const chatbotMessages = document.querySelector('.chatbot-messages');
+            const userMessage = document.createElement('div');
+            userMessage.classList.add('user-message');
+            const messageText = document.createElement('div');
+            messageText.classList.add('message-text');
+            messageText.textContent = question;
+            userMessage.appendChild(messageText);
+            chatbotMessages.appendChild(userMessage);
+    
+            // Create form data object
+            const formData = new FormData();
+            formData.append('question', question);
+    
+            // Send question to the server and receive response
+            fetch(`/chat_with_document/{{ file_obj.id }}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide the loading spinner
+                document.querySelector('.loading-spinner').style.display = 'none';
+
+                // Add bot response to the chat interface
+                const botMessage = document.createElement('div');
+                botMessage.classList.add('bot-message');
+                const messageText = document.createElement('div');
+                messageText.classList.add('message-text');
+                messageText.textContent = data.answer;
+                botMessage.appendChild(messageText);
+
+                const copyButton = document.createElement('button');
+                copyButton.classList.add('copy-button');
+                copyButton.textContent = 'Copy';
+                copyButton.addEventListener('click', function() {
+                    copyText(messageText);
+                });
+                botMessage.appendChild(copyButton);
+    
+                if (data.page_numbers.length > 0) {
+                    const messageSource = document.createElement('div');
+                    messageSource.classList.add('message-source');
+                    messageSource.innerHTML = 'Source: ' + data.page_numbers.map(page => `<a href="#" onclick="jumpToPage(${page + 1})">Page ${page + 1}</a>`).join(', ');
+                    botMessage.appendChild(messageSource);
+                }
+    
+                chatbotMessages.appendChild(botMessage);
+                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                updateClearHistoryButton();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Hide the loading spinner
+                document.querySelector('.loading-spinner').style.display = 'none';
+            });
+    
+            // Clear the input field
+            document.getElementById('question').value = '';
+        }
+    }
+
+    function copyText(element) {
+        const text = element.textContent;
+        navigator.clipboard.writeText(text);
+    }
+
+    function clearChatHistory() {
+        const chatbotMessages = document.querySelector('.chatbot-messages');
+        chatbotMessages.innerHTML = '';
+        updateClearHistoryButton();
+    }
+
+    function updateClearHistoryButton() {
+        const chatbotMessages = document.querySelector('.chatbot-messages');
+        const clearHistoryButton = document.querySelector('.clear-history-button');
+        if (chatbotMessages.childElementCount > 0) {
+            clearHistoryButton.style.display = 'block';
+        } else {
+            clearHistoryButton.style.display = 'none';
+        }
+    }
+</script>
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-pdf mr-2"></i>PDF Viewer: {{ file_name }}</h5>
+                </div>
+                <div class="card-body" style="height: auto;">
+                    <div class="row h-100">
+                        <div class="col-md-8 h-100">
+                            <!-- PDF Viewer -->
+                            <div id="pdf-container" style="height: auto; overflow: hidden;">
+                                <div class="pdf-toolbar d-flex justify-content-between align-items-center mb-2">
+                                    <span class="page-info">Page <input type="number" id="current-page" value="1" min="1" style="width: 50px;"> of <span id="total-pages"></span></span>
+                                    <div>
+                                        <button class="btn btn-outline-primary btn-sm" id="prev-page"><i class="fas fa-chevron-left"></i></button>
+                                        <button class="btn btn-outline-primary btn-sm" id="next-page"><i class="fas fa-chevron-right"></i></button>
+                                        <input type="number" id="zoom-level" value="100" min="50" max="200">
+                                        <span class="zoom-label">Zoom</span>
+                                    </div>
+                                </div>
+                                <div id="pdfCanvasContainer" style="width: 100%; height: auto;"></div>
+                                <div class="pdf-toolbar d-flex justify-content-between align-items-center mt-2">
+                                    <span class="page-info">Page <input type="number" id="current-page-bottom" value="1" min="1" style="width: 50px;"> of <span id="total-pages-bottom"></span></span>
+                                    <div>
+                                        <button class="btn btn-outline-primary btn-sm" id="prev-page-bottom"><i class="fas fa-chevron-left"></i></button>
+                                        <button class="btn btn-outline-primary btn-sm" id="next-page-bottom"><i class="fas fa-chevron-right"></i></button>
+                                        <input type="number" id="zoom-level-bottom" value="100" min="50" max="200">
+                                        <span class="zoom-label">Zoom</span>
+                                    </div>
+                                </div>
+                                <div class="pdf-toolbar d-flex justify-content-between align-items-center mt-2">
+                                    <span class="page-info">Page <input type="number" id="current-page-bottom-2" value="1" min="1" style="width: 50px;"> of <span id="total-pages-bottom-2"></span></span>
+                                    <div>
+                                        <button class="btn btn-outline-primary btn-sm" id="prev-page-bottom-2"><i class="fas fa-chevron-left"></i></button>
+                                        <button class="btn btn-outline-primary btn-sm" id="next-page-bottom-2"><i class="fas fa-chevron-right"></i></button>
+                                        <input type="number" id="zoom-level-bottom-2" value="100" min="50" max="200">
+                                        <span class="zoom-label">Zoom</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4" style="min-width: 250px;">
+                            <!-- Chatbot -->
+                            <div class="chatbot-container">
+                                <div class="chatbot-header">
+                                    <h4>Ask a Question</h4>
+                                    <button class="clear-history-button" onclick="clearChatHistory()" style="display: none;">Clear History</button>
+                                </div>
+                                <div class="chatbot-messages">
+                                    {% for message in messages %}
+                                        {% if message.sender == 'user' %}
+                                            <div class="user-message">
+                                                <div class="message-text">{{ message.text }}</div>
+                                            </div>
+                                        {% else %}
+                                            <div class="bot-message">
+                                                <div class="message-text">{{ message.text }}</div>
+                                                <button class="copy-button" onclick="copyText(this.previousElementSibling)">Copy</button>
+                                                {% if message.source %}
+                                                    <div class="message-source">
+                                                        Source: {% for page in message.page_numbers %}<a href="#" onclick="jumpToPage({{ page|add:1 }})">Page {{ page|add:1 }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <div class="chatbot-input">
+                                    <input type="text" id="question" name="question" placeholder="Type your question...">
+                                    <button onclick="sendQuestion()">Send</button>
+                                    <div class="loading-spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include PDF.js library -->
+
+<script type="module">
+    import * as pdfjsLib from "{% static 'googledriveapp/pdf/pdf.mjs' %}";
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "{% static 'googledriveapp/pdf/pdf.worker.mjs' %}";
+    // Fetch the file URL
+    const fileUrl = "{{ pdf_url }}";
+    let pdfDoc, currentPage, currentScale = 1.0;
+
+    // Initialize PDF.js
+    pdfjsLib.getDocument(fileUrl).promise.then(function(pdf) {
+        pdfDoc = pdf;
+        // Get the total number of pages
+        const totalPages = pdfDoc.numPages;
+        document.getElementById('total-pages').textContent = totalPages;
+        document.getElementById('total-pages-bottom').textContent = totalPages;
+        document.getElementById('total-pages-bottom-2').textContent = totalPages;
+
+        // Render the first page
+        renderPage(1);
+    }).catch(function(error) {
+        console.error('Error loading PDF:', error);
+        document.getElementById('pdfCanvasContainer').innerHTML = '<p class="text-center">Error loading the document.</p>';
+    });
+
+    function renderPage(pageNum) {
+        pdfDoc.getPage(pageNum).then(function(page) {
+            var containerWidth = document.getElementById('pdf-container').offsetWidth;
+            var scale = containerWidth / page.getViewport({ scale: 1 }).width;
+            var viewport = page.getViewport({ scale: scale * currentScale });
+            var canvas = document.createElement("canvas");
+            canvas.setAttribute('willReadFrequently', 'true');
+            var context = canvas.getContext("2d");
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            var renderContext = {
+                canvasContext: context,
+                viewport: viewport
+            };
+            var canvasContainer = document.getElementById('pdfCanvasContainer');
+            canvasContainer.innerHTML = '';
+            page.render(renderContext);
+            canvasContainer.appendChild(canvas);
+            currentPage = page;
+            document.getElementById('current-page').value = pageNum;
+            document.getElementById('current-page-bottom').value = pageNum;
+            document.getElementById('current-page-bottom-2').value = pageNum;
+
+            // Set the height of the container to the height of the canvas
+            canvasContainer.style.height = canvas.height + 'px';
+            document.getElementById('pdf-container').style.height = canvas.height + 'px';
+            document.querySelector('.card-body').style.height = 'auto';
+        });
+    }
+
+    // Event listeners for navigation buttons (top toolbar)
+    document.getElementById('prev-page').addEventListener('click', function() {
+        const currentPageNum = parseInt(document.getElementById('current-page').value);
+        if (currentPageNum > 1) {
+            renderPage(currentPageNum - 1);
+        }
+    });
+
+    document.getElementById('next-page').addEventListener('click', function() {
+        const currentPageNum = parseInt(document.getElementById('current-page').value);
+        const totalPages = parseInt(document.getElementById('total-pages').textContent);
+        if (currentPageNum < totalPages) {
+            renderPage(currentPageNum + 1);
+        }
+    });
+
+    // Event listener for zoom level change (top toolbar)
+    document.getElementById('zoom-level').addEventListener('input', function() {
+        const zoomLevel = parseInt(this.value) / 100;
+        currentScale = zoomLevel;
+        if (currentPage) {
+            renderPage(currentPage.pageNumber);
+        }
+    });
+
+    // Event listeners for navigation buttons (bottom toolbar)
+    document.getElementById('prev-page-bottom').addEventListener('click', function() {
+        const currentPageNum = parseInt(document.getElementById('current-page-bottom').value);
+        if (currentPageNum > 1) {
+            renderPage(currentPageNum - 1);
+        }
+    });
+
+    document.getElementById('next-page-bottom').addEventListener('click', function() {
+        const currentPageNum = parseInt(document.getElementById('current-page-bottom').value);
+        const totalPages = parseInt(document.getElementById('total-pages-bottom').textContent);
+        if (currentPageNum < totalPages) {
+            renderPage(currentPageNum + 1);
+        }
+    });
+
+    // Event listener for zoom level change (bottom toolbar)
+    document.getElementById('zoom-level-bottom').addEventListener('input', function() {
+        const zoomLevel = parseInt(this.value) / 100;
+        currentScale = zoomLevel;
+        if (currentPage) {
+            renderPage(currentPage.pageNumber);
+        }
+    });
+
+    // Event listeners for navigation buttons (second bottom toolbar)
+    document.getElementById('prev-page-bottom-2').addEventListener('click', function() {
+        const currentPageNum = parseInt(document.getElementById('current-page-bottom-2').value);
+        if (currentPageNum > 1) {
+            renderPage(currentPageNum - 1);
+        }
+    });
+
+    document.getElementById('next-page-bottom-2').addEventListener('click', function() {
+        const currentPageNum = parseInt(document.getElementById('current-page-bottom-2').value);
+        const totalPages = parseInt(document.getElementById('total-pages-bottom-2').textContent);
+        if (currentPageNum < totalPages) {
+            renderPage(currentPageNum + 1);
+        }
+    });
+
+    // Event listener for zoom level change (second bottom toolbar)
+    document.getElementById('zoom-level-bottom-2').addEventListener('input', function() {
+        const zoomLevel = parseInt(this.value) / 100;
+        currentScale = zoomLevel;
+        if (currentPage) {
+            renderPage(currentPage.pageNumber);
+        }
+    });
+
+    // Event listener for window resize
+    window.addEventListener('resize', function() {
+        if (currentPage) {
+            renderPage(currentPage.pageNumber);
+        }
+    });
+
+    // Event listener for current page input (top toolbar)
+    document.getElementById('current-page').addEventListener('input', function() {
+        const pageNumber = parseInt(this.value);
+        if (pageNumber >= 1 && pageNumber <= pdfDoc.numPages) {
+            renderPage(pageNumber);
+        }
+    });
+
+    // Event listener for current page input (bottom toolbar)
+    document.getElementById('current-page-bottom').addEventListener('input', function() {
+        const pageNumber = parseInt(this.value);
+        if (pageNumber >= 1 && pageNumber <= pdfDoc.numPages) {
+            renderPage(pageNumber);
+        }
+    });
+
+    // Event listener for current page input (second bottom toolbar)
+    document.getElementById('current-page-bottom-2').addEventListener('input', function() {
+        const pageNumber = parseInt(this.value);
+        if (pageNumber >= 1 && pageNumber <= pdfDoc.numPages) {
+            renderPage(pageNumber);
+        }
+    });
+
+    // Function to jump to a specific page
+    window.jumpToPage = function(pageNumber) {
+        renderPage(pageNumber);
+    };
+
+    // Call updateClearHistoryButton initially
+    updateClearHistoryButton();
+</script>
+{% endblock body %}
+
+remove one toolbar becuase i see two at the bottom but increase the height of the .card-body and pdf-container so the the remaining toolbar at the bottom can also be seen. 
+
+remove the sources from the chat.html but create url and add source_document to the chatbot results. its should be answer, then source document, page then source document, page, then source document, page. display the first 10 words of the source documents
+
+
+def chat_with_document(request, file_id):
+    file_obj = get_object_or_404(File, id=file_id)
+    namespace = file_obj.namespace
+
+    if request.method == 'POST':
+        question = request.POST.get('question')
+
+        # Load the embeddings from the database
+        
+        vectorstore = Chroma(collection_name=namespace, embedding_function=embedding2, persist_directory="googledriveapp/persist")
+        # Expose the vectorstore as a retriever interface
+        retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 20})
+        compressor = FlashrankRerank(model="ms-marco-TinyBERT-L-2-v2",  top_n = 10,)
+        compression_retriever = ContextualCompressionRetriever(
+        base_compressor=compressor, base_retriever=retriever
+            )
+
+        compressed_docs = compression_retriever.get_relevant_documents (question)       
+        #prompt = hub.pull("rlm/rag-prompt", api_url="https://api.hub.langchain.com")
+        template = """Use the following pieces of context to answer the question at the end. 
+        If you don't know the answer, just say that you don't know, don't try to make up an answer. 
+        Use 10 sentences maximum. Keep the answer as concise as possible. Always say 
+        "thanks for asking!" at the end of the answer. 
+        {context}
+        Question: {question}
+        Helpful Answer:"""
+        QA_CHAIN_PROMPT = PromptTemplate.from_template(template)# Run chain
+        # Create a chain to answer questions
+        qa = RetrievalQA.from_chain_type(
+                                        llm=llm, 
+                                        chain_type="stuff", 
+                                        retriever=compression_retriever,
+                                        return_source_documents=True,
+                                         chain_type_kwargs={"prompt": QA_CHAIN_PROMPT
+                                                                }
+                                        )
+
+        # Get the answer and relevant documents
+        result = qa({"query": question})
+        answer = result['result']
+        print(answer)
+        print(result["source_documents"])
+        relevant_docs = compression_retriever.get_relevant_documents(question)
+
+        # Extract the page numbers from the relevant documents
+        #source = [doc.metadata['source'] for doc in relevant_docs]
+        page_numbers = [doc.metadata['page'] for doc in relevant_docs]
+        source_documents=[result["source_documents"] for doc in relevant_docs]
+        context = {
+            'pdf_url': request.build_absolute_uri(file_obj.file.url),
+            'file_name': file_obj.filetitle,
+            'question': question,
+            'answer': answer,
+            'source_documents': source_documents,
+            'page_numbers': page_numbers
+        }
+        return JsonResponse(context)
+    else:
+        context = {
+            'pdf_url': request.build_absolute_uri(file_obj.file.url),
+            'file_name': file_obj.filetitle,
+            'file_obj': file_obj,
+        }
+
+    return render(request, 'googledriveapp/chat.html', context)
+
+
+
+    2222222222222222222222222222222222222222222
+To summarize the document when a PDF is opened, a new page is opened, or the page is refreshed, you can modify the view_pdf function in your Django views.py. Here's a modified version of the function:
+def view_pdf(request, file_id):
+    file_obj = get_object_or_404(File, id=file_id)
+    
+    # Check if namespace is empty or None
+    if not file_obj.namespace:
+        # Ingest the file and generate embeddings
+        loader = PyPDFLoader(file_obj.file.path)
+        documents = loader.load()
+        text_splitter = MarkdownTextSplitter(chunk_size=2000, chunk_overlap=200, length_function=len)
+        texts = text_splitter.split_documents(documents)
+        
+        # Generate a unique namespace for the file
+        namespace = f"file_{file_obj.id}"
+        file_obj.namespace = namespace
+        file_obj.save()
+        
+        # Create a Chroma collection for the file
+        client = Chroma.from_documents(texts, embedding2, collection_name=namespace, persist_directory="googledriveapp/persist")
+        
+    # Get the current page number from the request or set it to 1 if not provided
+    current_page = int(request.GET.get('page', 1))
+
+    # Summarize the current page
+    summary = summarize_page(file_obj, current_page)
+
+    context = {
+        'pdf_url': request.build_absolute_uri(file_obj.file.url),
+        'file_name': file_obj.filetitle,
+        'file_obj': file_obj,
+        'summary': summary,
+    }
+
+    return render(request, 'googledriveapp/chat.html', context)
+
+def summarize_page(file_obj, page_number):
+    file_obj.current_page = page_number
+    file_obj.save()
+
+    namespace = file_obj.namespace
+    client = Chroma(collection_name=namespace, embedding_function=embedding2, persist_directory="googledriveapp/persist")
+    vectorstore = client.as_retriever(search_type="similarity", search_kwargs={"k": 6})
+    compressor = FlashrankRerank(model="ms-marco-TinyBERT-L-2-v2", top_n=6)
+    compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=vectorstore)
+    compressed_docs = compression_retriever.get_relevant_documents()
+
+    prompt = hub.pull("rlm/rag-prompt", api_url="https://api.hub.langchain.com")
+    template = """Use the following pieces of context to summarize the content of the current page. Keep the summary as concise as possible. if possible in bullet points format. {context} Page Summary:"""
+    QA_CHAIN_PROMPT = PromptTemplate.from_template(template)
+
+    qa = RetrievalQA.from_chain_type(
+        llm=llm,
+        chain_type="stuff",
+        retriever=compression_retriever,
+        return_source_documents=True,
+        chain_type_kwargs={"prompt": QA_CHAIN_PROMPT}
+    )
+
+    result = qa({"query": "Summarize the current page"})
+    summary = result['result']
+
+    return summary
+
+Now, when you open a PDF or navigate to a new page, the view_pdf function will call the summarize_page function to generate a summary of the current page and pass it to the chat.html template.
+In the chat.html template, you can display the summary in the chatbot as follows:
+<div class="chatbot-messages">
+    {% for message in messages %}
+        {% if message.sender == 'user' %}
+            <div class="user-message">
+                <div class="message-text">{{ message.text }}</div>
+            </div>
+        {% else %}
+            <div class="bot-message">
+                <div class="message-text">{{ message.text }}</div>
+                {% if message.summary %}
+                    <div class="message-source">Summary: {{ message.summary }}</div>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endfor %}
+</div>
+
+In the views.py, modify the chat_with_document function to include the summary in the context:
+def chat_with_document(request, file_id):
+    file_obj = get_object_or_404(File, id=file_id)
+    namespace = file_obj.namespace
+    summary = None
+
+    if request.method == 'POST':
+        # ...
+    else:
+        summary = summarize_page(file_obj, 1)
+
+    context = {
+        'pdf_url': request.build_absolute_uri(file_obj.file.url),
+        'file_name': file_obj.filetitle,
+        'file_obj': file_obj,
+        'summary': summary,
+    }
+
+    return render(request, 'googledriveapp/chat.html', context)
+
+Finally, update the JavaScript code in the summarize.html template to send the current page number when the chatbot sends a message:
+function sendQuestion() {
+    const question = document.getElementById('question').value;
+    if (question.trim() !== '') {
+        // ...
+
+        fetchPageSummary(currentPage);
+    }
+}
+
+function fetchPageSummary(pageNumber) {
+    // ...
+
+    fetch(`/summarize_the_document/${file_obj.id}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Page-Number': pageNumber, // Add the current page number to the headers
+        },
+        body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+        // ...
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+In the views.py, modify the summarize_the_document function to get the current page number from the headers:
+def summarize_the_document(request, file_id):
+    file_obj = get_object_or_404(File, id=file_id)
+    namespace = file_obj.namespace
+
+    if request.method == 'POST':
+        page_number = int(request.META.get('HTTP_PAGENUMBER', 1))
+
+        # ...
+
+Now, the summary will be displayed in the chatbot for summarizing documents when a PDF is opened, a new page is opened, or the page is refreshed.
+
+
+
+
+    To display the summary in the summarize.html template, you can add the following code inside the <div class="card-body"> element in the template:
+<div class="card-body">
+  <h5 class="card-title">Summary:</h5>
+  <p class="card-text">{{ summary }}</p>
+</div>
+
+Here, {{ summary }} is the context variable that you passed from the summarize_the_document view to the template.
+Additionally, you can modify the JavaScript code in the summarize.html template to send the current page number to the server when the user clicks on the "Summarize" button. You can do this by adding a click event listener to the button and passing the current page number as a parameter to the summarizeTheDocument function. Here's an example:
+document.getElementById('summarize-btn').addEventListener('click', function() {
+  const currentPage = document.getElementById('current-page').value;
+  summarizeTheDocument(currentPage);
+});
+
+Make sure to replace 'summarize-btn' with the actual ID of the "Summarize" button in your template.
+Finally, you need to modify the summarizeTheDocument function in the summarize.html template to accept the currentPage parameter and pass it to the server as a part of the POST request. Here's an example:
+
+function summarizeTheDocument(currentPage) {
+  const fileId = {{ file_obj.id }};
+  const url = `/summarize_the_document/${fileId}/`;
+  const data = new FormData();
+  data.append('page_number', currentPage);
+  
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: data
+  })
+  .then(response => response.json())
+  .then(data => {
+    document.getElementById('summary').textContent = data.summary;
+  })
+  .catch(error => {
+    console.error('Error:', error);
+  });
+}
+
+Here, currentPage is passed as a parameter to the summarizeTheDocument function, and it is appended to the data object as page_number. This data object is then sent to the server as a part of the POST request.
+
+
+converstaional hhistory in a model
+To enable the chatbot to remember details across requests, we need to store and retrieve the conversation history from a persistent storage, such as a database.
+
+Here's an example of how you can modify your code to store the conversation history in a database:
+
+Create a model to store the conversation history:
+python
+
+
+Copy code
+from django.db import models
+
+class ConversationHistory(models.Model):
+    session_key = models.CharField(max_length=40, unique=True)
+    conversation = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+In your chatbot2 view, retrieve or create the conversation history for the current session, and update it with the new question and response:
+python
+
+
+Copy code
+from django.contrib.sessions.models import Session
+from .models import ConversationHistory
+
+@csrf_exempt
+def chatbot2(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            question = data.get("question")
+            logger.info(f"Received question: {question}")
+            if question:
+                try:
+                    # Get or create the conversation history for the current session
+                    conversation_history, created = ConversationHistory.objects.get_or_create(
+                        session_key=request.session.session_key,
+                        defaults={'conversation': []}
+                    )
+
+                    # Add the new question to the conversation history
+                    conversation_history.conversation.append({"role": "user", "content": question})
+                    conversation_history.save()
+
+                    response_generator = generate_response2(conversation_history.conversation)
+
+                    def stream_response():
+                        for chunk in response_generator:
+                            yield chunk
+
+                    return StreamingHttpResponse(stream_response(), content_type='text/plain')
+                except Exception as e:
+                    logger.exception("Error generating response")
+                    return JsonResponse({"error": str(e)}, status=500)
+            else:
+                logger.warning("Empty question received")
+                return JsonResponse({"error": "Empty question"}, status=400)
+        except json.JSONDecodeError as e:
+            logger.exception("Invalid JSON data")
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+    return render(request, "googledriveapp/chatbot.html")
+
+def generate_response2(conversation_history):
+    # Use OpenAI's chat model to generate a response with the conversation history
+    chat_completion = client.chat.completions.create(
+        messages=conversation_history + [{"role": "system", "content": """ Discuss, describe and fully elaborate each point with examples as if you were a human Ugandan University Professor helping university students pass exams. Be professional and factual. Answer based on context of question asked. Use simple english. Give more than 10 points. Fully explain and elaborate each point with an example. Where possible give references or quotations. Examples should be relevant to uganda. Use essays with introduction, body and conclusion. Rewrite all content and answers like a human being. rephrase all content. Change the syntax and vocabulary. Recheck and verify your answers to eliminate errors, and give the most correct answer. """}],
+        stream=True,
+        model="microsoft/WizardLM-2-8x22B"
+    )
+
+    for chunk in chat_completion:
+        if chunk.choices:
+            delta = chunk.choices[0].delta
+            if delta.content:
+                # Update the conversation history with the assistant's response
+                conversation_history.append({"role": "assistant", "content": delta.content})
+                yield delta.content
+
+    # Save the updated conversation history
+    conversation_history_obj = ConversationHistory.objects.get(session_key=request.session.session_key)
+    conversation_history_obj.conversation = conversation_history
+    conversation_history_obj.save()
+In this modified code:
+
+We create a ConversationHistory model to store the conversation history for each session.
+In the chatbot2 view, we retrieve or create a ConversationHistory instance for the current session using get_or_create. If an instance doesn't exist, we create a new one with an empty conversation list.
+We update the conversation history with the new question and save it to the database.
+We pass the conversation history to the generate_response2 function, which generates the response.
+After generating the response and updating the conversation history, we retrieve the ConversationHistory instance for the current session and save the updated conversation history to the database.
+With this approach, the conversation history is stored in the database and will be available across multiple requests from the same user session.
+
+Note that you'll need to run Django migrations to create the ConversationHistory model in your database:
+
+
+Copy code
+python manage.py makemigrations
+python manage.py migrate
+Also, make sure to handle session expiration and cleanup of the ConversationHistory instances as needed.

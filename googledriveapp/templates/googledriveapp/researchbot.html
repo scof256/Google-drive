@@ -1,0 +1,351 @@
+{% extends 'googledriveapp/base.html' %}
+
+{% block body %}
+<style>
+  .chatbot-container {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+    position: relative;
+    margin: 0 auto;
+    max-width: 800px;
+    width: 100%;
+  }
+
+  .chatbot-header {
+    margin-bottom: 20px;
+  }
+
+  .chatbot-header h4 {
+    font-weight: bold;
+  }
+
+  .chatbot-messages {
+    margin-bottom: 20px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  .user-message {
+    background-color: #007bff;
+    color: #fff;
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+  }
+
+  .bot-message {
+    background-color: #fff;
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+
+  .chatbot-input {
+    display: flex;
+  }
+
+  .chatbot-input input {
+    flex-grow: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 5px 0 0 5px;
+  }
+
+  .chatbot-input button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 0 5px 5px 0;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+
+  .chatbot-input button:hover {
+    background-color: #0056b3;
+  }
+
+  .loading-spinner {
+    display: none;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    margin-left: 10px;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  .clear-history-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+
+  .clear-history-button:hover {
+    background-color: #0056b3;
+  }
+
+  .copy-button {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+
+  .copy-button:hover {
+    background-color: #0056b3;
+  }
+
+  .login-container {
+    width: 300px;
+    margin: 0 auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+  }
+
+  .login-container h2 {
+    text-align: center;
+  }
+
+  .login-container input[type="text"],
+  .login-container input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+  }
+
+  .login-container input[type="submit"] {
+    width: 100%;
+    padding: 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .login-container input[type="submit"]:hover {
+    background-color: #45a049;
+  }
+
+  .header-buttons {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  
+  .header-buttons a {
+    margin-left: 10px;
+  }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          const cookies = document.cookie.split(';');
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+      const csrftoken = getCookie('csrftoken');
+    
+      function sendQuestion() {
+        const question = document.getElementById("question").value;
+        if (question.trim() !== "") {
+          // Show the loading spinner
+          document.querySelector(".loading-spinner").style.display = "inline-block";
+          document.querySelector(".button-text").style.display = "none";
+    
+          // Add user question to the chat interface
+          const chatbotMessages = document.querySelector(".chatbot-messages");
+          const userMessage = document.createElement("div");
+          userMessage.classList.add("user-message");
+          userMessage.textContent = question;
+          chatbotMessages.appendChild(userMessage);
+          chatbotMessages.scrollTop = chatbotMessages.scrollHeight; // Scroll to the bottom
+    
+          // Create a container element for the response
+          const responseContainer = document.createElement("div");
+          responseContainer.classList.add("bot-message");
+          chatbotMessages.appendChild(responseContainer);
+    
+          // Send the question to the server
+          fetch("/research/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": csrftoken,
+            },
+            body: JSON.stringify({ question: question }),
+          })
+            .then(async (response) => {
+              if (response.ok) {
+                const reader = response.body.getReader();
+                let output = "";
+    
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) {
+                    break;
+                  }
+                  output += new TextDecoder().decode(value);
+                  responseContainer.innerHTML = marked.parse(output);
+                }
+    
+                // Hide the loading spinner
+                document.querySelector(".loading-spinner").style.display = "none";
+                document.querySelector(".button-text").style.display = "inline";
+    
+                const copyButton = document.createElement("button");
+                copyButton.classList.add("copy-button");
+                copyButton.textContent = "Copy";
+                copyButton.addEventListener("click", function () {
+                  copyText(responseContainer);
+                });
+                responseContainer.appendChild(copyButton);
+    
+                // Scroll to the bottom of the chat
+                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                updateClearHistoryButton();
+              } else {
+                console.error("Error:", response.statusText);
+                // Hide the loading spinner
+                document.querySelector(".loading-spinner").style.display = "none";
+                document.querySelector(".button-text").style.display = "inline";
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              // Hide the loading spinner
+              document.querySelector(".loading-spinner").style.display = "none";
+              document.querySelector(".button-text").style.display = "inline";
+            });
+    
+          // Clear the input field
+          document.getElementById("question").value = "";
+        }
+      }
+    
+      function copyText(element) {
+        const messageContent = element.textContent.trim();
+        const messageWithoutButton = messageContent.replace(/Copy\s*$/, '').trim();
+        navigator.clipboard.writeText(messageWithoutButton);
+      }
+    
+      function clearChatHistory() {
+        const chatbotMessages = document.querySelector(".chatbot-messages");
+        chatbotMessages.innerHTML = "";
+        updateClearHistoryButton();
+    
+        // Make an AJAX request to the server to delete the conversation history session variable
+        fetch('/clear_conversation_history/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+            },
+        });
+    }
+    
+    // Clear the conversation history when the page loads
+    window.addEventListener('load', clearChatHistory);
+    
+    function updateClearHistoryButton() {
+        const chatbotMessages = document.querySelector(".chatbot-messages");
+        const clearHistoryButton = document.querySelector(".clear-history-button");
+        if (chatbotMessages.childElementCount > 0) {
+            clearHistoryButton.style.display = "block";
+        } else {
+            clearHistoryButton.style.display = "none";
+        }
+    }
+    
+    // Add an event listener to the "Clear History" button
+    const clearHistoryButton = document.querySelector(".clear-history-button");
+    clearHistoryButton.addEventListener("click", clearChatHistory);
+    
+      function updateClearHistoryButton() {
+        const chatbotMessages = document.querySelector(".chatbot-messages");
+        const clearHistoryButton = document.querySelector(".clear-history-button");
+        if (chatbotMessages.childElementCount > 0) {
+          clearHistoryButton.style.display = "block";
+        } else {
+          clearHistoryButton.style.display = "none";
+        }
+      }
+    </script>
+    
+    <div class="container py-4">
+      <div class="row justify-content-center">
+        <div class="col-md-12">
+          <div class="header-buttons">
+            <a href="{% url 'index' %}" class="btn btn-outline-primary">
+              <i class="fas fa-home"></i> Home
+            </a>
+            <a href="{% url 'all_files' %}" class="btn btn-outline-primary">
+              <i class="fas fa-file-alt"></i> All Files
+            </a>
+            <a href="{% url 'chatbot2' %}" class="btn btn-outline-primary">
+              <i class="fas fa-comment-dots"></i> Chat
+            </a>
+          </div>
+          <div class="chatbot-container">
+            <div class="chatbot-header">
+              <h4>Research Papers Here</h4>
+              <button class="clear-history-button" onclick="clearChatHistory()" style="display: none;">Clear History</button>
+            </div>
+            <div class="chatbot-messages"></div>
+            <div class="chatbot-input">
+              <input type="text" id="question" name="question" placeholder="Type your question..." class="form-control shadow-sm">
+              <button onclick="sendQuestion()" class="btn btn-primary shadow-sm">
+                <span class="button-text">Send</span>
+                <span class="loading-spinner"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endblock body %}

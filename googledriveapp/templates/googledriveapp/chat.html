@@ -1,0 +1,444 @@
+{% extends 'googledriveapp/base.html' %}
+{% block body %}
+{% load static %}
+
+<style>
+    #pdf-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #pdfCanvasContainer {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 10px 0;
+    }
+
+    #pdf-image {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+    }
+
+    .pdf-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 10px;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .pdf-toolbar button {
+        margin: 0 5px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+    }
+    
+    .pdf-toolbar button:hover {
+        background-color: #0056b3;
+    }
+    
+    .page-info {
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+    
+    .zoom-label {
+        margin-right: 5px;
+        font-weight: bold;
+    }
+
+    .pdf-toolbar input[type="number"] {
+        width: 60px;
+    }
+
+
+    .chatbot-container {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        height: auto;
+        overflow-y: auto;
+        position: relative;
+    }
+
+    .chatbot-header {
+        margin-bottom: 20px;
+    }
+
+    .chatbot-header h4 {
+        font-weight: bold;
+    }
+
+    .chatbot-messages {
+        margin-bottom: 20px;
+    }
+
+    .user-message {
+        background-color: #007bff;
+        color: #fff;
+        padding: 10px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+    }
+
+    .bot-message {
+        background-color: #fff;
+        padding: 10px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+    }
+
+    .message-text {
+        margin-bottom: 5px;
+    }
+
+    .message-source {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+
+    .message-source a {
+        color: #007bff;
+        text-decoration: none;
+    }
+
+    .message-source a:hover {
+        text-decoration: underline;
+    }
+
+    .chatbot-input {
+        display: flex;
+    }
+
+    .chatbot-input input {
+        flex-grow: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 5px 0 0 5px;
+    }
+
+    .chatbot-input button {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 0 5px 5px 0;
+        cursor: pointer;
+    }
+
+    .copy-button {
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        margin-left: 10px;
+    }
+
+    .loading-spinner {
+        display: none;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #007bff;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        margin-left: 10px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .clear-history-button {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+</style>
+
+<script>
+    function sendQuestion() {
+        const question = document.getElementById('question').value;
+        if (question.trim() !== '') {
+            // Show the loading spinner
+            document.querySelector('.loading-spinner').style.display = 'inline-block';
+
+            // Add user question to the chat interface
+            const chatbotMessages = document.querySelector('.chatbot-messages');
+            const userMessage = document.createElement('div');
+            userMessage.classList.add('user-message');
+            const messageText = document.createElement('div');
+            messageText.classList.add('message-text');
+            messageText.textContent = question;
+            userMessage.appendChild(messageText);
+            chatbotMessages.appendChild(userMessage);
+
+            // Create form data object
+            const formData = new FormData();
+            formData.append('question', question);
+
+            // Send question to the server and receive response
+            fetch(`/chat_with_document/{{ file_obj.id }}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide the loading spinner
+                document.querySelector('.loading-spinner').style.display = 'none';
+
+                // Add bot response to the chat interface
+                const botMessage = document.createElement('div');
+                botMessage.classList.add('bot-message');
+                const messageText = document.createElement('div');
+                messageText.classList.add('message-text');
+                messageText.textContent = data.answer;
+                botMessage.appendChild(messageText);
+
+                const copyButton = document.createElement('button');
+                copyButton.classList.add('copy-button');
+                copyButton.textContent = 'Copy';
+                copyButton.addEventListener('click', function() {
+                    copyText(messageText);
+                });
+                botMessage.appendChild(copyButton);
+
+                if (data.source_and_page.length > 0) {
+                    data.source_and_page.forEach(sourceAndPage => {
+                        const messageSource = document.createElement('div');
+                        messageSource.classList.add('message-source');
+                        const truncatedSource = sourceAndPage.source.split(' ').slice(0, 60).join(' ') + '...';
+                        messageSource.innerHTML = `Source: ${truncatedSource}, <a href="#" onclick="jumpToPage(${sourceAndPage.page})">Page ${sourceAndPage.page}</a>`;
+                        botMessage.appendChild(messageSource);
+                    });
+                }
+
+                chatbotMessages.appendChild(botMessage);
+                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                updateClearHistoryButton();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Hide the loading spinner
+                document.querySelector('.loading-spinner').style.display = 'none';
+            });
+
+            // Clear the input field
+            document.getElementById('question').value = '';
+        }
+    }
+
+    function copyText(element) {
+        const text = element.textContent;
+        navigator.clipboard.writeText(text);
+    }
+
+    function clearChatHistory() {
+        const chatbotMessages = document.querySelector('.chatbot-messages');
+        chatbotMessages.innerHTML = '';
+        updateClearHistoryButton();
+    }
+
+    function updateClearHistoryButton() {
+        const chatbotMessages = document.querySelector('.chatbot-messages');
+        const clearHistoryButton = document.querySelector('.clear-history-button');
+        if (chatbotMessages.childElementCount > 0) {
+            clearHistoryButton.style.display = 'block';
+        } else {
+            clearHistoryButton.style.display = 'none';
+        }
+    }
+</script>
+
+<script type="module">
+    function renderPage(pageNum) {
+        const pdfImage = document.getElementById('pdf-image');
+        pdfImage.src = ''; // Clear the existing image
+        pdfImage.src = `/pdf_image/{{ file_obj.id }}/${pageNum}/`;
+        document.getElementById('current-page').value = pageNum;
+        document.getElementById('current-page-bottom').value = pageNum;
+    }
+
+    // Event listeners for navigation buttons (top toolbar)
+    document.getElementById('prev-page').addEventListener('click', function() {
+        const currentPageNum = parseInt(document.getElementById('current-page').value);
+        if (currentPageNum > 1) {
+            renderPage(currentPageNum - 1);
+        }
+    });
+
+    document.getElementById('next-page').addEventListener('click', function() {
+        const currentPageNum = parseInt(document.getElementById('current-page').value);
+        const totalPages = parseInt(document.getElementById('total-pages').textContent);
+        if (currentPageNum < totalPages) {
+            renderPage(currentPageNum + 1);
+        }
+    });
+
+    // Event listener for zoom level change (top toolbar)
+    document.getElementById('zoom-level').addEventListener('input', function() {
+        const zoomLevel = parseInt(this.value) / 100;
+        document.getElementById('pdf-image').style.transform = `scale(${zoomLevel})`;
+        document.getElementById('zoom-level-bottom').value = this.value;
+    });
+
+    // Event listeners for navigation buttons (bottom toolbar)
+    document.getElementById('prev-page-bottom').addEventListener('click', function() {
+        const currentPageNum = parseInt(document.getElementById('current-page-bottom').value);
+        if (currentPageNum > 1) {
+            renderPage(currentPageNum - 1);
+        }
+    });
+
+    document.getElementById('next-page-bottom').addEventListener('click', function() {
+        const currentPageNum = parseInt(document.getElementById('current-page-bottom').value);
+        const totalPages = parseInt(document.getElementById('total-pages-bottom').textContent);
+        if (currentPageNum < totalPages) {
+            renderPage(currentPageNum + 1);
+        }
+    });
+
+    // Event listener for zoom level change (bottom toolbar)
+    document.getElementById('zoom-level-bottom').addEventListener('input', function() {
+        const zoomLevel = parseInt(this.value) / 100;
+        document.getElementById('pdf-image').style.transform = `scale(${zoomLevel})`;
+        document.getElementById('zoom-level').value = this.value;
+    });
+
+    // Event listener for current page input (top toolbar)
+    document.getElementById('current-page').addEventListener('input', function() {
+        const pageNumber = parseInt(this.value);
+        if (pageNumber >= 1 && pageNumber <= {{ total_pages }}) {
+            renderPage(pageNumber);
+        }
+    });
+
+    // Event listener for current page input (bottom toolbar)
+    document.getElementById('current-page-bottom').addEventListener('input', function() {
+        const pageNumber = parseInt(this.value);
+        if (pageNumber >= 1 && pageNumber <= {{ total_pages }}) {
+            renderPage(pageNumber);
+        }
+    });
+
+    // Function to jump to a specific page
+    window.jumpToPage = function(pageNumber) {
+        renderPage(pageNumber);
+    };
+
+    // Call updateClearHistoryButton initially
+    updateClearHistoryButton();
+</script>
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-pdf mr-2"></i>PDF Viewer: {{ file_name }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <!-- PDF Viewer -->
+                            <div id="pdf-container">
+                                <div class="pdf-toolbar">
+                                    <div>
+                                        <button id="prev-page">Previous</button>
+                                        <button id="next-page">Next</button>
+                                        <span class="page-info">
+                                            Page <input type="number" id="current-page" value="1" min="1" max="{{ total_pages }}" style="width: 60px;"> of <span id="total-pages">{{ total_pages }}</span>
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span class="zoom-label">Zoom:</span>
+                                        <input type="number" id="zoom-level" min="50" max="200" value="100" step="10">%
+                                    </div>
+                                </div>
+                                <div id="pdfCanvasContainer">
+                                    <img src="{{ first_page_url }}" alt="PDF Page" id="pdf-image">
+                                </div>
+                                <div class="pdf-toolbar">
+                                    <div>
+                                        <button id="prev-page-bottom">Previous</button>
+                                        <button id="next-page-bottom">Next</button>
+                                        <span class="page-info">
+                                            Page <input type="number" id="current-page-bottom" value="1" min="1" max="{{ total_pages }}" style="width: 40px;"> of <span id="total-pages-bottom">{{ total_pages }}</span>
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span class="zoom-label">Zoom:</span>
+                                        <input type="number" id="zoom-level-bottom" min="50" max="200" value="100" step="10">%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4" style="min-width: 250px;">
+                                <!-- Chatbot -->
+                            <div class="chatbot-container">
+                                <div class="chatbot-header">
+                                    <h4>Ask a Question</h4>
+                                    <button class="clear-history-button" onclick="clearChatHistory()" style="display: none;">Clear History</button>
+                                </div>
+                                <div class="chatbot-messages">
+                                    {% for message in messages %}
+                                        {% if message.sender == 'user' %}
+                                            <div class="user-message">
+                                                <div class="message-text">{{ message.text }}</div>
+                                            </div>
+                                        {% else %}
+                                            <div class="bot-message">
+                                                <div class="message-text">{{ message.text }}</div>
+                                                <button class="copy-button" onclick="copyText(this.previousElementSibling)">Copy</button>
+                                                {% if message.source_and_page %}
+                                                    {% for source_page in message.source_and_page %}
+                                                        <div class="message-source">
+                                                            <a href="#" onclick="jumpToPage({{ source_page.page }})">Page {{ source_page.page }}</a>
+                                                            <p>{{ source_page.source|truncatechars:60 }}</p>
+                                                        </div>
+                                                    {% endfor %}
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <div class="chatbot-input">
+                                    <input type="text" id="question" name="question" placeholder="Type your question...">
+                                    <button onclick="sendQuestion()">Send</button>
+                                    <div class="loading-spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock body %}
